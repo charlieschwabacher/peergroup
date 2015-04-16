@@ -1,0 +1,36 @@
+{
+  "name": "peergroup",
+  "version": "0.0.0",
+  "description": "peer to peer messaging over WebRTC data channels",
+  "main": "lib/peer_group.js",
+  "files": [
+    "lib/"
+  ],
+  "scripts": {
+    "test": "mocha",
+    "build": "babel src --out-dir lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/charlieschwabacher/peergroup.git"
+  },
+  "keywords": [
+    "webrtc",
+    "datachannel",
+    "peergroup"
+  ],
+  "author": "Charlie Schwabacher",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/charlieschwabacher/peergroup/issues"
+  },
+  "homepage": "https://github.com/charlieschwabacher/peergroup",
+  "devDependencies": {
+    "babel": "^5.1.10",
+    "coffee-script": "^1.9.2",
+    "mocha": "^2.2.4"
+  },
+  "dependencies": {
+    "ws": "^0.7.1"
+  }
+}
