@@ -1,7 +1,7 @@
 # mock browser environment
 
 global.WebSocket = require 'ws'
-global.window = require './rtc_mocks'
+global.window = require 'rtc-mocks'
 
 # require dependancies
 
