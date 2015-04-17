@@ -6,7 +6,7 @@ global.window = require('rtc-mocks')
 // require dependancies
 
 const assert = require('assert')
-const PeerGroup = require('../src/peer_group')
+const PeerGroup = require('../src/peergroup')
 const GroupServer = require('../src/group_server')
 const events = PeerGroup.prototype.events
 
