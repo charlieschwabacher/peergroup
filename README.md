@@ -2,7 +2,7 @@
 A peering server and messaging library for peer to peer communication over WebRTC data channels
 
 
-## to install
+## To install
 `npm install peergroup`
 
 
