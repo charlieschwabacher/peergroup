@@ -1,5 +1,5 @@
 # Peergroup
-A peering server and messaging library for peer to peer communication over WebRTC data channels
+A signalling server and messaging library for peer to peer communication over WebRTC data channels
 
 
 ### To install
