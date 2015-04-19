@@ -196,8 +196,8 @@ class PeerGroup {
       const connection = this.connections.get(group, from)
 
       if (connection != null) {
-        const candidate = new RTCIceCandidate(candidate)
-        connection.addIceCandidate(candidate)
+        const rtcCandidate = new RTCIceCandidate(candidate)
+        connection.addIceCandidate(rtcCandidate)
       }
     })
   }
