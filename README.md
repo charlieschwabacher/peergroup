@@ -2,11 +2,11 @@
 A peering server and messaging library for peer to peer communication over WebRTC data channels
 
 
-## to install:
+### to install
 `npm install peergroup`
 
 
-## on the server:
+### on the server
 
 ```javascript
 GroupServer = require('peergroup/server');
@@ -14,7 +14,7 @@ var server = new GroupServer(3000);
 ```
 
 
-## in the browser
+### in the browser
 
 ```javascript
 peer = new PeerGroup('ws://localhost:3000');
