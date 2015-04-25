@@ -9,10 +9,8 @@ const log = (message) => {
 
 class GroupServer {
 
-  constructor(port) {
-    log(`starting ultrawave server on port ${port}`)
-
-    this.wss = new WSServer({port: port})
+  constructor(options) {
+    this.wss = new WSServer(options)
 
     // map group names to sets of peer ids
     this.groups = new MapSet
