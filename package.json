@@ -1,6 +1,6 @@
 {
   "name": "peergroup",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "peer to peer messaging over WebRTC data channels",
   "main": "peergroup.js",
   "files": [
