@@ -1,5 +1,6 @@
 const WSServer = require('./ws_server')
 const MapSet = require('./map_set')
+const crypto = require('crypto')
 
 
 const log = (message) => {
@@ -12,6 +13,9 @@ class GroupServer {
   constructor(options) {
     this.wss = new WSServer(options)
 
+    // keep track of peer ids that are in use
+    this.ids = new Set
+
     // map group names to sets of peer ids
     this.groups = new MapSet
 
@@ -19,9 +23,9 @@ class GroupServer {
     this.memberships = new MapSet
 
 
+
     this.wss.on('open', (id) => {
       log(`opened connection to ${id}`)
-      this.wss.send(id, 'start', id)
     })
 
     this.wss.on('close', (id) => {
@@ -35,8 +39,12 @@ class GroupServer {
       }
 
       this.memberships.delete(id)
+      this.ids.delete(id)
     })
 
+    this.wss.on('request id', (id, secret) => {
+      if (!this.ids.has(id) && )
+    })
 
     this.wss.on('create', (id, group) => {
       if (this.groups.has(group)) {

@@ -5,7 +5,7 @@ const WebSocketServer = ws.Server
 
 
 const getId = (cb) => {
-  crypto.randomBytes(8, (ex, buff) => {
+  crypto.randomBytes(16, (ex, buff) => {
     cb(buff.toString('base64').replace('/','-').replace('+', '_'))
   })
 }

@@ -29,7 +29,7 @@ const log = (message) => {
 // we will set configuration and events on the prototype after creating the
 // PeerGroup class
 
-const configuration = {
+const defaultConfiguration = {
   iceServers: [{url: 'stun:stun.l.google.com:19302'}]
 }
 
@@ -47,8 +47,9 @@ const events = {
 
 class PeerGroup {
 
-  constructor(url) {
+  constructor({url, configuration}) {
     this.ws = new WS(url)
+    this.configuration = configuration || defaultConfiguration
     this.groups = new Set
     this.connections = new MapMap
     this.channels = new MapMap
@@ -82,21 +83,21 @@ class PeerGroup {
     this.ws.on('open', () => {
       log('ws opened')
       this.open = true
-      this.trigger(this.events.open, this)
+      this.trigger(events.open)
     })
 
     this.ws.on('close', () => {
       log('ws closed')
       this.open = false
-      this.trigger(this.events.close, this)
+      this.trigger(events.close)
     })
 
     this.ready = new Promise((resolve) => {
       this.ws.on('start', (id) => {
         log('ws started')
-        resolve(id)
         this.id = id
-        this.trigger(this.events.start, this)
+        resolve(id)
+        this.trigger(events.start)
       })
     })
 
@@ -109,7 +110,7 @@ class PeerGroup {
 
       dataChannel.addEventListener('open', () => {
         log('data channel opened to peer')
-        this.trigger(this.events.peer, group, from)
+        this.trigger(events.peer, group, from)
       })
 
       connection.addEventListener('icecandidate', (e) => {
@@ -146,7 +147,7 @@ class PeerGroup {
       connection.addEventListener('datachannel', (e) => {
         log('data channel opened by peer')
         addDataChannel(group, from, e.channel)
-        this.trigger(this.events.peer, group, from)
+        this.trigger(events.peer, group, from)
       })
 
       connection.addEventListener('icecandidate', (e) => {
@@ -205,7 +206,7 @@ class PeerGroup {
 
 
   attemptAction(action, group, success, failure) {
-    if (this.groups.has(group)) return
+    if (this.groups.has(group)) return failure()
 
     const actionFailure = `${action} failed`
 
@@ -214,7 +215,7 @@ class PeerGroup {
       this.ws.off(action, onSuccess)
       this.ws.off(actionFailure, onFailure)
       this.groups.add(group)
-      this.trigger(this.events.join, group)
+      this.trigger(events.join, group)
       success()
     }
 
@@ -259,11 +260,6 @@ class PeerGroup {
   }
 
 
-  reestablishConnection(group, id) {
-
-  }
-
-
   leave(group) {
     if (!this.groups.has(group)) return
 
@@ -279,7 +275,7 @@ class PeerGroup {
     this.connections.delete(group)
     this.channels.delete(group)
 
-    this.trigger(this.events.leave, group)
+    this.trigger(events.leave, group)
   }
 
 
@@ -336,8 +332,7 @@ class PeerGroup {
 }
 
 PeerGroup.log = true
-PeerGroup.prototype.events = events
-PeerGroup.prototype.configuration = configuration
+PeerGroup.events = events
 
 module.exports = PeerGroup
 
