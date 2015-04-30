@@ -113,10 +113,11 @@ peer.join('world').then(function() {
     after a connection has been established.
 
 
-
 ### Contributions
 
-Contributions are welcome!  There are a lot of exciting things that can be
-built with peer to peer messaging in the browser - if you are interested in
-using this library, and have ideas or questions please don't hesitate to get in
-touch.
+Contributions are welcome!  Before opening a pull make sure to `npm test` and
+`npm run build`.
+
+There are a lot of exciting things that can be built with peer to peer messaging
+in the browser - if you are interested in using this library, and have ideas
+or questions please don't hesitate to get in touch.
