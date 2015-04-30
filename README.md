@@ -32,7 +32,7 @@ peer.join('world').then(function() {
 
 ### API
 
-* GroupServer
+* `GroupServer`
 
   * `constructor(options)` - creates a new GroupServer, passing the options
   object through to a [WebSocketServer](//github.com/websockets/ws).  Available
