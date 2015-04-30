@@ -44,7 +44,7 @@ peer.join('world').then(function() {
 * `PeerGroup`
 
   * `constructor({url, configuration})` - opens a connection to a group server,
-    providing the url to the server and optionally an
+    accepting the url to the server and optionally an
     [RTCConfiguration](http://www.w3.org/TR/webrtc/#idl-def-RTCPeerConnection)
     object to be passed to RTCPeerConnections.
 
