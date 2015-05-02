@@ -2,13 +2,17 @@
 
 global.WebSocket = require('ws')
 global.window = require('rtc-mocks')
+global.localStorage = {
+  getItem: () => null,
+  setItem: () => {}
+}
 
 // require dependancies
 
 const assert = require('assert')
 const PeerGroup = require('../src/peergroup')
 const GroupServer = require('../src/group_server')
-const events = PeerGroup.prototype.events
+const events = PeerGroup.events
 
 PeerGroup.log = false
 GroupServer.log = false
@@ -29,7 +33,7 @@ PeerGroup.prototype.shouldSend = function(expectedType, expectedPaylod, done) {
 
 GroupServer.prototype.shouldSend = (
   function(expectedId, expectedType, expectedPayload, done) {
-    this.wss.send = (id, type, payload) => {
+    this.send = (id, type, payload) => {
       assert.equal(id, expectedId)
       assert.equal(type, expectedType)
       assert.equal(payload, expectedPayload)
@@ -55,7 +59,7 @@ describe('PeerGroup:', () => {
   describe('when a peer connects to a server', () => {
     it('the peer should trigger an open event and set open prop', (done) => {
       const server = new GroupServer({port: port += 1})
-      const client = new PeerGroup(`ws:localhost:${port}`)
+      const client = new PeerGroup({url: `ws:localhost:${port}`})
 
       assert(!client.open)
 
@@ -65,22 +69,67 @@ describe('PeerGroup:', () => {
       })
     })
 
-    it('the server should send "start" with the peer id', (done) => {
+    it('the server should send "id" with the peer id and secret', (done) => {
       const server = new GroupServer({port: port += 1})
-      server.wss.send = (id, type, payload) => {
-        assert.equal(type, 'start')
-        assert.equal(payload, id)
+      server.send = (id, type, payload) => {
+        assert.equal(type, 'id')
+        assert.equal(payload.id, id)
+        assert(typeof(payload.secret) === 'string')
         done()
       }
-      const client = new PeerGroup(`ws:localhost:${port}`)
+      const client = new PeerGroup({url: `ws:localhost:${port}`})
     })
 
-    it('the peer should set its id', () => {
-      const server = new GroupServer({port: port += 1})
-      const client = new PeerGroup(`ws:localhost:${port}`)
+    it(`the peer should set its id and save it to local storage if it does not
+        have an existing stored id`, (done) => {
+      const client = new PeerGroup({url: 'ws://localhost'})
       assert.strictEqual(client.id, null)
-      client.ws.trigger('start', 'abc')
+      localStorage.setItem = (key, value) => {
+        assert.equal(key, 'peerGroupSecret')
+        assert.equal(value, 'def')
+
+        localStorage.setItem = () => null
+        done()
+      }
+      client.ws.trigger('id', {id: 'abc', secret: 'def'})
       assert.equal(client.id, 'abc')
+    })
+
+    it(`the peer should request its existing id if it finds one in local
+        storage`, (done) => {
+      const client = new PeerGroup({url: 'ws://localhost'})
+      localStorage.getItem = () => 'stored secret'
+      client.ws.send = (type, payload) => {
+        assert.equal(type, 'id')
+        assert.equal(payload, 'stored secret')
+
+        localStorage.getItem = () => null
+        done()
+      }
+      client.ws.trigger('id', {id: 'abc', secret: 'non matching secret'})
+    })
+
+    it(`the server should respond to "id" with secret by sending another "id"
+        message with updated id, new id should correspond to original id
+        matching the saved secret.`, (done) => {
+      const server = new GroupServer({port: port += 1})
+
+      let secret = null
+      localStorage.setItem = (key, value) => {secret = value}
+      localStorage.getItem = () => secret
+
+      const client = new PeerGroup({url: `ws:localhost:${port}`})
+      client.on(events.start, () => {
+        client.close()
+        const client2 = new PeerGroup({url: `ws:localhost:${port}`})
+        client2.on(events.start, () => {
+          assert.equal(client.id, client2.id)
+
+          localStorage.getItem = () => null
+          localStorage.setItem = () => {}
+          done()
+        })
+      })
     })
   })
 
@@ -88,7 +137,7 @@ describe('PeerGroup:', () => {
   describe('when a peer attempts to create a group', () => {
     it('the peer should send "create" with the group name', (done) => {
       const server = new GroupServer({port: port += 1})
-      const client = new PeerGroup(`ws:localhost:${port}`)
+      const client = new PeerGroup({url: `ws:localhost:${port}`})
       client.shouldSend('create', 'lobby', done)
       client.create('lobby')
     })
@@ -96,7 +145,7 @@ describe('PeerGroup:', () => {
     describe('and the group already exists', () => {
       it('the server should send "create failed" w/ the group name', (done) => {
         const server = new GroupServer({port: port += 1})
-        const client = new PeerGroup(`ws:localhost:${port}`)
+        const client = new PeerGroup({url: `ws:localhost:${port}`})
         server.groups.map.set('lobby', new Set)
         client.on(events.start, () => {
           server.shouldSend(client.id, 'create failed', 'lobby', done)
@@ -106,7 +155,7 @@ describe('PeerGroup:', () => {
 
       it('the peer should return and reject a promise', (done) => {
         const server = new GroupServer({port: port += 1})
-        const client = new PeerGroup(`ws:localhost:${port}`)
+        const client = new PeerGroup({url: `ws:localhost:${port}`})
         server.groups.map.set('lobby', new Set)
         client.on(events.open, () => {
           client.create('lobby').catch(done)
@@ -117,7 +166,7 @@ describe('PeerGroup:', () => {
     describe('and the group does not yet exist', () => {
       it('the server should send "create" with the group name', (done) => {
         const server = new GroupServer({port: port += 1})
-        const client = new PeerGroup(`ws:localhost:${port}`)
+        const client = new PeerGroup({url: `ws:localhost:${port}`})
         client.on(events.start, () => {
           server.shouldSend(client.id, 'create', 'lobby', done)
           client.create('lobby')
@@ -126,7 +175,7 @@ describe('PeerGroup:', () => {
 
       it('the peer should add the group to its groups set', (done) => {
         const server = new GroupServer({port: port += 1})
-        const client = new PeerGroup(`ws:localhost:${port}`)
+        const client = new PeerGroup({url: `ws:localhost:${port}`})
         client.on(events.open, () => {
           client.create('lobby').then(() => {
             assert(client.groups.has('lobby'))
@@ -137,7 +186,7 @@ describe('PeerGroup:', () => {
 
       it('the peer should trigger a join event with the group', (done) => {
         const server = new GroupServer({port: port += 1})
-        const client = new PeerGroup(`ws:localhost:${port}`)
+        const client = new PeerGroup({url: `ws:localhost:${port}`})
         client.on(events.join, (group) => {
           assert.equal(group, 'lobby')
           done()
@@ -149,7 +198,7 @@ describe('PeerGroup:', () => {
 
       it('the peer should run its success callback', (done) => {
         const server = new GroupServer({port: port += 1})
-        const client = new PeerGroup(`ws:localhost:${port}`)
+        const client = new PeerGroup({url: `ws:localhost:${port}`})
         client.on(events.open, () => {
           client.create('lobby').then(done)
         })
@@ -160,7 +209,7 @@ describe('PeerGroup:', () => {
   describe('when a peer attempts to join an existing group', () => {
     it('the peer should send "join" with the group name', (done) => {
       const server = new GroupServer({port: port += 1})
-      const client = new PeerGroup(`ws:localhost:${port}`)
+      const client = new PeerGroup({url: `ws:localhost:${port}`})
       client.shouldSend('join', 'lobby', done)
       client.join('lobby')
     })
@@ -168,7 +217,7 @@ describe('PeerGroup:', () => {
     describe('and the group already exists,', () => {
       it('the server should send "join" with the group name', (done) => {
         const server = new GroupServer({port: port += 1})
-        const client = new PeerGroup(`ws:localhost:${port}`)
+        const client = new PeerGroup({url: `ws:localhost:${port}`})
         server.groups.map.set('lobby', new Set)
         client.on(events.start, () => {
           server.shouldSend(client.id, 'join', 'lobby', done)
@@ -178,7 +227,7 @@ describe('PeerGroup:', () => {
 
       it('the peer should add the group to its groups set', (done) => {
         const server = new GroupServer({port: port += 1})
-        const client = new PeerGroup(`ws:localhost:${port}`)
+        const client = new PeerGroup({url: `ws:localhost:${port}`})
         server.groups.map.set('lobby', new Set)
         client.on(events.open, () => {
           client.join('lobby').then(() => {
@@ -190,7 +239,7 @@ describe('PeerGroup:', () => {
 
       it('the peer should trigger a join event with the group', (done) => {
         const server = new GroupServer({port: port += 1})
-        const client = new PeerGroup(`ws:localhost:${port}`)
+        const client = new PeerGroup({url: `ws:localhost:${port}`})
         server.groups.map.set('lobby', new Set)
         client.on(events.join, (group) => {
           assert.equal(group, 'lobby')
@@ -203,7 +252,7 @@ describe('PeerGroup:', () => {
 
       it('the peer should run its success callback', (done) => {
         const server = new GroupServer({port: port += 1})
-        const client = new PeerGroup(`ws:localhost:${port}`)
+        const client = new PeerGroup({url: `ws:localhost:${port}`})
         server.groups.map.set('lobby', new Set)
         client.on(events.open, () => {
           client.join('lobby').then(done)
@@ -214,7 +263,7 @@ describe('PeerGroup:', () => {
     describe('and the group does not yet exist,', () => {
       it('the server should send "join failed" with the group name', (done) => {
         const server = new GroupServer({port: port += 1})
-        const client = new PeerGroup(`ws:localhost:${port}`)
+        const client = new PeerGroup({url: `ws:localhost:${port}`})
         client.on(events.start, () => {
           server.shouldSend(client.id, 'join failed', 'lobby', done)
           client.join('lobby')
@@ -223,7 +272,7 @@ describe('PeerGroup:', () => {
 
       it('the peer should run its failure callback', (done) => {
         const server = new GroupServer({port: port += 1})
-        const client = new PeerGroup(`ws:localhost:${port}`)
+        const client = new PeerGroup({url: `ws:localhost:${port}`})
         client.on(events.open, () => {
           client.join('lobby').catch(done)
         })
@@ -234,7 +283,9 @@ describe('PeerGroup:', () => {
   describe('when a peer sends a message in a group', () => {
     it('the peers should receive the message and trigger events', (done) => {
       const server = new GroupServer({port: port += 1})
-      const peers = [1, 2, 3].map(() => new PeerGroup(`ws:localhost:${port}`))
+      const peers = [1, 2, 3].map(() => {
+        return new PeerGroup({url: `ws:localhost:${port}`})
+      })
       setupRoom(peers, 'lobby', () => {
 
         // first peer sends a message, all others should receive it
@@ -257,7 +308,7 @@ describe('PeerGroup:', () => {
   describe('when a peer leaves a group', () => {
     it('the server should remove user from list of group members', (done) => {
       const server = new GroupServer({port: port += 1})
-      const client = new PeerGroup(`ws:localhost:${port}`)
+      const client = new PeerGroup({url: `ws:localhost:${port}`})
       server.groups.add('lobby', 'abcd')
       client.on(events.start, () => {
         client.join('lobby').then(() => {
@@ -281,7 +332,7 @@ describe('PeerGroup:', () => {
       it(`the server should clean up references to the group if the group
           becomes empty`, (done) => {
         const server = new GroupServer({port: port += 1})
-        const client = new PeerGroup(`ws:localhost:${port}`)
+        const client = new PeerGroup({url: `ws:localhost:${port}`})
         assert(!server.groups.has('lobby'))
         client.on(events.start, () => {
           client.create('lobby').then(() => {
@@ -300,7 +351,9 @@ describe('PeerGroup:', () => {
 
       it('the peers should clean up their closed connections', (done) => {
         const server = new GroupServer({port: port += 1})
-        const peers = [1, 2, 3].map(() => new PeerGroup(`ws:localhost:${port}`))
+        const peers = [1, 2, 3].map(() => {
+          return new PeerGroup({url: `ws:localhost:${port}`})
+        })
         setupRoom(peers, 'lobby', () => {
           peers.forEach((peer) => {
             assert.equal(peer.connections.get('lobby').size, 2)
@@ -324,7 +377,7 @@ describe('PeerGroup:', () => {
   describe('when a peer disconnects from a server', () => {
     it('the server should clean up references to the user', (done) => {
       const server = new GroupServer({port: port += 1})
-      const client = new PeerGroup(`ws:localhost:${port}`)
+      const client = new PeerGroup({url: `ws:localhost:${port}`})
       client.on(events.start, () => {
         client.create('lobby').then(() => {
           assert(server.groups.has('lobby'), client.id)
@@ -344,7 +397,9 @@ describe('PeerGroup:', () => {
 
     it('the peers should clean up their closed connections', (done) => {
       const server = new GroupServer({port: port += 1})
-      const peers = [1, 2, 3].map(() => new PeerGroup(`ws:localhost:${port}`))
+      const peers = [1, 2, 3].map(() => {
+        return new PeerGroup({url: `ws:localhost:${port}`})
+      })
       setupRoom(peers, 'lobby', () => {
         peers.forEach((peer) => {
           assert.equal(peer.connections.get('lobby').size, 2)

@@ -94,7 +94,6 @@ peer.join('world').then(function() {
       * `peer` - triggered when a data channel is opened to a new peer.
         Includes the group and peer id as arguments.
 
-
     To listen to lifecycle events, access the symbols through the
     `PeerGroup.events` object, for example:
     `peerGroup.on(PeerGroup.events.open, function(){});`
@@ -109,8 +108,10 @@ peer.join('world').then(function() {
     assigned by the server and is ready to create and join rooms and send and
     receive message.
 
-  * `id` - a unique string identifying the peer, assigned by the peerign server
-    after a connection has been established.
+  * `id` - a unique string identifying the peer, assigned by the peering server
+    after a connection has been established.  PeerGroup stores a secret key in
+    local storage allowing a peer to reclaim the same id every time it connects
+    to a GroupServer.
 
 
 ### Contributions
