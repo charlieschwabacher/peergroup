@@ -93,14 +93,16 @@ class PeerGroup {
     })
 
     this.ready = new Promise((resolve) => {
+      let reclaimAttempted = false
       this.ws.on('id', ({id, secret}) => {
         const existingSecret = localStorage.getItem('peerGroupSecret')
-        if (existingSecret != null && secret != existingSecret) {
+        if (!reclaimAttempted && existingSecret && secret != existingSecret) {
+          reclaimAttempted = true
           this.ws.send('id', existingSecret)
         } else {
           log('ws started')
           this.id = id
-          localStorage.setItem('peerGroupSecret', secret)
+          if (secret != null) localStorage.setItem('peerGroupSecret', secret)
           resolve(id)
           this.trigger(events.start, this)
         }

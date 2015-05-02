@@ -90,18 +90,23 @@ class GroupServer {
 
     this.on('id', (id, secret) => {
       const nextId = getIdFromKey(secret)
-      const ws = this.sockets.get(id)
 
-      close(id)
-      this.sockets.set(nextId, ws)
+      if (this.sockets.has(nextId)) {
+        this.send(id, 'id', {id: id})
+      } else {
+        const ws = this.sockets.get(id)
 
-      ws.removeAllListeners('message')
-      ws.addEventListener('message', (e) => {
-        const [type, payload] = JSON.parse(e.data)
-        this.trigger(type, nextId, payload)
-      })
+        close(id)
+        this.sockets.set(nextId, ws)
 
-      this.send(nextId, 'id', {id: nextId, secret: secret})
+        ws.removeAllListeners('message')
+        ws.addEventListener('message', (e) => {
+          const [type, payload] = JSON.parse(e.data)
+          this.trigger(type, nextId, payload)
+        })
+
+        this.send(nextId, 'id', {id: nextId, secret: secret})
+      }
     })
 
     this.on('create', (id, group) => {
