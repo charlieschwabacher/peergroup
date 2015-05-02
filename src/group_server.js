@@ -53,7 +53,20 @@ class GroupServer {
     this.memberships = new MapSet
 
 
-    const close = (id) => {
+    const setUpClientConnection = (ws, id) => {
+      this.sockets.set(id, ws)
+      ws.removeAllListeners()
+      ws.addEventListener('close', (e) => {
+        log(`closed connection to ${id}`)
+        tearDownClientConnection(id)
+      })
+      ws.addEventListener('message', (e) => {
+        const [type, payload] = JSON.parse(e.data)
+        this.trigger(type, id, payload)
+      })
+    }
+
+    const tearDownClientConnection = (id) => {
       const memberships = this.memberships.get(id)
       if (memberships != null) {
         memberships.forEach((group) => {
@@ -70,18 +83,8 @@ class GroupServer {
     this.wss.on('connection', (ws) => {
       getIdKeyPair((id, secret) => {
         log(`opened connection to ${id}`)
-        this.sockets.set(id, ws)
+        setUpClientConnection(ws, id)
         this.send(id, 'id', {id: id, secret: secret})
-
-        ws.addEventListener('close', (e) => {
-          log(`closed connection to ${id}`)
-          close(id)
-        })
-
-        ws.addEventListener('message', (e) => {
-          const [type, payload] = JSON.parse(e.data)
-          this.trigger(type, id, payload)
-        })
       })
     })
 
@@ -95,16 +98,8 @@ class GroupServer {
         this.send(id, 'id', {id: id})
       } else {
         const ws = this.sockets.get(id)
-
-        close(id)
-        this.sockets.set(nextId, ws)
-
-        ws.removeAllListeners('message')
-        ws.addEventListener('message', (e) => {
-          const [type, payload] = JSON.parse(e.data)
-          this.trigger(type, nextId, payload)
-        })
-
+        tearDownClientConnection(id)
+        setUpClientConnection(ws, nextId)
         this.send(nextId, 'id', {id: nextId, secret: secret})
       }
     })
