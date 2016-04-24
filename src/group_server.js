@@ -39,7 +39,6 @@ class GroupServer {
 
     this.wss = new WebSocketServer(options)
 
-
     // map event type to set of handlers
     this.handlers = new MapSet
 

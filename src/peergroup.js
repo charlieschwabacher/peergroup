@@ -26,8 +26,8 @@ const log = (message) => {
 
 
 
-// we will set configuration and events on the prototype after creating the
-// PeerGroup class
+// use a default configuration if one is not passed in to the PeerGroup
+// constructor
 
 const defaultConfiguration = {
   iceServers: [{url: 'stun:stun.l.google.com:19302'}]
@@ -267,12 +267,6 @@ class PeerGroup {
     return new Set(this.connections.get(group).keys())
   }
 
-
-  reestablishConnection(group, id) {
-
-  }
-
-
   leave(group) {
     if (!this.groups.has(group)) return
 
@@ -327,7 +321,8 @@ class PeerGroup {
   sendTo(group, id, type, payload) {
     const channel = this.channels.get(group, id)
     if (channel != null) {
-      channel.send(JSON.stringify([type, payload]))
+      const message = JSON.stringify([type, payload]);
+      channel.send(message);
     }
   }
 

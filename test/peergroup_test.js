@@ -82,7 +82,8 @@ describe('PeerGroup:', () => {
 
     it(`the peer should set its id and save it to local storage if it does not
         have an existing stored id`, (done) => {
-      const client = new PeerGroup({url: 'ws://localhost'})
+      const server = new GroupServer({port: port += 1})
+      const client = new PeerGroup({url: `ws:localhost:${port}`})
       assert.strictEqual(client.id, null)
       localStorage.setItem = (key, value) => {
         assert.equal(key, 'peerGroupSecret')
@@ -97,7 +98,8 @@ describe('PeerGroup:', () => {
 
     it(`the peer should request its existing id if it finds one in local
         storage`, (done) => {
-      const client = new PeerGroup({url: 'ws://localhost'})
+      const server = new GroupServer({port: port += 1})
+      const client = new PeerGroup({url: `ws:localhost:${port}`})
       localStorage.getItem = () => 'stored secret'
       client.ws.send = (type, payload) => {
         assert.equal(type, 'id')

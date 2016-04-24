@@ -29,7 +29,6 @@
   "homepage": "https://github.com/charlieschwabacher/peergroup",
   "devDependencies": {
     "babel": "^5.1.10",
-    "coffee-script": "^1.9.2",
     "mocha": "^2.2.4",
     "rtc-mocks": "https://github.com/charlieschwabacher/rtc-mocks.git"
   },
